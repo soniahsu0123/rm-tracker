@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { useRouter, usePathname } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Profile } from '@/types'
-import { LayoutDashboard, FolderOpen, Users, LogOut } from 'lucide-react'
+import { LayoutDashboard, FolderOpen, Users, LogOut, KeyRound } from 'lucide-react'
 
 interface NavbarProps {
   profile: Profile
@@ -52,9 +52,17 @@ export default function Navbar({ profile }: NavbarProps) {
           </div>
           <div className="flex items-center gap-3">
             <span className="text-sm text-slate-500">{profile.name}</span>
+            <Link
+              href="/settings"
+              className="flex items-center gap-1 text-slate-400 hover:text-slate-600 transition-colors"
+              title="修改密碼"
+            >
+              <KeyRound size={15} />
+            </Link>
             <button
               onClick={handleLogout}
               className="flex items-center gap-1 text-slate-400 hover:text-slate-600 transition-colors"
+              title="登出"
             >
               <LogOut size={15} />
             </button>

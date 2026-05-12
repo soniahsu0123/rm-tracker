@@ -5,6 +5,7 @@ import StatusBadge from '@/components/StatusBadge'
 import ProgressBar from '@/components/ProgressBar'
 import ProgressUpdateForm from '@/components/ProgressUpdateForm'
 import EditProjectForm from '@/components/EditProjectForm'
+import ProgressUpdateCard from '@/components/ProgressUpdateCard'
 import { ChevronLeft } from 'lucide-react'
 
 export default async function ProjectDetailPage({
@@ -35,9 +36,14 @@ export default async function ProjectDetailPage({
 
   const { data: updates } = await supabase
     .from('progress_updates')
-    .select('*, profiles(id, name, role)')
+    .select('*, profiles(id, name, role), progress_update_history(id, edited_by, field_changes, created_at)')
     .eq('project_id', id)
     .order('week_date', { ascending: false })
+
+  const { data: members } = await supabase
+    .from('profiles')
+    .select('id, name')
+    .order('name')
 
   const isManager = profile.role === 'manager' || profile.role === 'admin'
   const isOwner = project.owner_id === user.id
@@ -87,35 +93,12 @@ export default async function ProjectDetailPage({
         {updates && updates.length > 0 ? (
           <div className="space-y-3">
             {updates.map(update => (
-              <div key={update.id} className="bg-white rounded-xl border border-slate-200 p-4">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-medium text-slate-500">
-                    {new Date(update.week_date).toLocaleDateString('zh-TW', {
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric',
-                    })}
-                  </span>
-                  {update.progress_percent !== null && (
-                    <span className="text-xs text-indigo-600 font-medium">
-                      {update.progress_percent}%
-                    </span>
-                  )}
-                </div>
-                <p className="text-sm text-slate-900">{update.description}</p>
-                {update.issues && (
-                  <div className="mt-2 p-2 bg-red-50 rounded-lg">
-                    <p className="text-xs font-medium text-red-700 mb-0.5">問題</p>
-                    <p className="text-xs text-red-600">{update.issues}</p>
-                  </div>
-                )}
-                {update.next_steps && (
-                  <div className="mt-2 p-2 bg-blue-50 rounded-lg">
-                    <p className="text-xs font-medium text-blue-700 mb-0.5">下週計畫</p>
-                    <p className="text-xs text-blue-600">{update.next_steps}</p>
-                  </div>
-                )}
-              </div>
+              <ProgressUpdateCard
+                key={update.id}
+                update={update}
+                canEdit={canEdit}
+                members={members ?? []}
+              />
             ))}
           </div>
         ) : (

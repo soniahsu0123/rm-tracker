@@ -27,6 +27,7 @@ export default function EditProjectForm({ project }: { project: Project }) {
         description: (formData.get('description') as string) || null,
         status: formData.get('status') as string,
         progress_percent: parseInt(formData.get('progress_percent') as string) || 0,
+        due_date: (formData.get('due_date') as string) || null,
       })
       .eq('id', project.id)
 
@@ -87,7 +88,9 @@ export default function EditProjectForm({ project }: { project: Project }) {
           >
             <option value="active">進行中</option>
             <option value="delayed">落後</option>
+            <option value="paused">暫停</option>
             <option value="completed">已完成</option>
+            <option value="cancelled">已取消</option>
           </select>
         </div>
         <div>
@@ -101,6 +104,16 @@ export default function EditProjectForm({ project }: { project: Project }) {
             className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
           />
         </div>
+      </div>
+
+      <div>
+        <label className="block text-xs font-medium text-slate-700 mb-1">預計完成日</label>
+        <input
+          name="due_date"
+          type="date"
+          defaultValue={project.due_date ?? ''}
+          className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+        />
       </div>
 
       {error && <p className="text-xs text-red-600">{error}</p>}

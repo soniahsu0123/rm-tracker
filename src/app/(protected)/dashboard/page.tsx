@@ -30,9 +30,10 @@ export default async function DashboardPage() {
     ? allProjects
     : allProjects?.filter(p => p.owner_id === user.id)
 
+  const today = new Date().toISOString().split('T')[0]
   const total = projects?.length ?? 0
-  const active = projects?.filter(p => p.status === 'active').length ?? 0
-  const delayed = projects?.filter(p => p.status === 'delayed').length ?? 0
+  const active = projects?.filter(p => p.status === 'active' && (!p.due_date || p.due_date >= today)).length ?? 0
+  const delayed = projects?.filter(p => p.status === 'delayed' || (p.status === 'active' && p.due_date && p.due_date < today)).length ?? 0
   const completed = projects?.filter(p => p.status === 'completed').length ?? 0
 
   // Manager: group by team member
@@ -63,15 +64,13 @@ export default async function DashboardPage() {
             {isManager ? '監看所有成員的進度狀況' : '追蹤你負責的專案進度'}
           </p>
         </div>
-        {!isManager && (
-          <Link
-            href="/projects/new"
-            className="flex items-center gap-1.5 bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors"
-          >
-            <Plus size={15} />
-            新增專案
-          </Link>
-        )}
+        <Link
+          href="/projects/new"
+          className="flex items-center gap-1.5 bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors"
+        >
+          <Plus size={15} />
+          新增專案
+        </Link>
       </div>
 
       <div className="grid grid-cols-4 gap-3">

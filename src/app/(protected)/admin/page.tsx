@@ -23,12 +23,16 @@ export default async function AdminPage() {
     {} as Record<string, { total: number; active: number; delayed: number; completed: number }>
   )
 
+  const { data: permissions } = await supabase.from('permissions').select('*').order('role').order('action')
+
   return (
     <AdminClient
       members={members ?? []}
       countsByOwner={countsByOwner ?? {}}
       currentUserId={user.id}
       isAdmin={profile.role === 'admin'}
+      isManager={profile.role === 'manager' || profile.role === 'admin'}
+      permissions={permissions ?? []}
     />
   )
 }

@@ -26,8 +26,9 @@ export default function NewProjectForm() {
     const { error: insertError } = await supabase.from('projects').insert({
       name: formData.get('name') as string,
       description: (formData.get('description') as string) || null,
-      status: formData.get('status') as string,
+      status: 'active',
       progress_percent: parseInt(formData.get('progress_percent') as string) || 0,
+      due_date: (formData.get('due_date') as string) || null,
       owner_id: user.id,
     })
 
@@ -71,18 +72,6 @@ export default function NewProjectForm() {
 
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">狀態</label>
-            <select
-              name="status"
-              defaultValue="active"
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            >
-              <option value="active">進行中</option>
-              <option value="delayed">落後</option>
-              <option value="completed">已完成</option>
-            </select>
-          </div>
-          <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">目前進度 %</label>
             <input
               name="progress_percent"
@@ -90,6 +79,14 @@ export default function NewProjectForm() {
               min="0"
               max="100"
               defaultValue="0"
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">預計完成日</label>
+            <input
+              name="due_date"
+              type="date"
               className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
           </div>

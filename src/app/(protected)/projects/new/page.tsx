@@ -14,7 +14,7 @@ export default async function NewProjectPage() {
     .single()
 
   if (!profile) redirect('/login')
-  if (profile.role === 'manager' || profile.role === 'admin') redirect('/projects')
+  // Only redirect if no permission - any role can create projects by default
 
   return <NewProjectForm />
 }

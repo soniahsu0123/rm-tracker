@@ -53,15 +53,13 @@ export default async function ProjectsPage({
         <h1 className="text-xl font-bold text-slate-900">
           {isManager ? '所有專案' : '我的專案'}
         </h1>
-        {!isManager && (
-          <Link
-            href="/projects/new"
-            className="flex items-center gap-1.5 bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors"
-          >
-            <Plus size={15} />
-            新增專案
-          </Link>
-        )}
+        <Link
+          href="/projects/new"
+          className="flex items-center gap-1.5 bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors"
+        >
+          <Plus size={15} />
+          新增專案
+        </Link>
       </div>
 
       <div className="flex gap-1">

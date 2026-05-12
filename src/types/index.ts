@@ -1,5 +1,5 @@
 export type Role = 'admin' | 'manager' | 'employee'
-export type Status = 'active' | 'delayed' | 'completed'
+export type Status = 'active' | 'delayed' | 'completed' | 'paused' | 'cancelled'
 
 export interface Profile {
   id: string
@@ -16,9 +16,16 @@ export interface Project {
   status: Status
   progress_percent: number
   description: string | null
+  due_date: string | null
   created_at: string
   updated_at: string
   profiles?: Profile
+}
+
+export interface Permission {
+  role: 'manager' | 'employee'
+  action: string
+  allowed: boolean
 }
 
 export interface ProgressUpdate {

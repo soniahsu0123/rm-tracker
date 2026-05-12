@@ -36,6 +36,11 @@ export default function NewProjectForm() {
       setError('建立失敗，請稍後再試')
       setLoading(false)
     } else {
+      await fetch('/api/log', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'project.create', target_type: 'project', details: { name: formData.get('name') } }),
+      })
       router.push('/projects')
       router.refresh()
     }

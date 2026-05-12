@@ -14,5 +14,6 @@ export async function POST(req: NextRequest) {
   const admin = createAdminClient()
   const { error } = await admin.auth.admin.updateUserById(userId, { password: '123456' })
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  await supabase.from('activity_logs').insert({ user_id: user.id, action: 'admin.reset_password', target_type: 'user', target_id: userId })
   return NextResponse.json({ success: true })
 }

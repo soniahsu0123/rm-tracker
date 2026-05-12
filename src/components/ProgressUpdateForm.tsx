@@ -50,6 +50,17 @@ export default function ProgressUpdateForm({ projectId, userId }: Props) {
         .eq('id', projectId)
     }
 
+    await fetch('/api/log', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'progress.create',
+        target_type: 'project',
+        target_id: projectId,
+        details: progressPercent ? { progress_percent: parseInt(progressPercent) } : undefined,
+      }),
+    })
+
     formRef.current?.reset()
     setLoading(false)
     router.refresh()

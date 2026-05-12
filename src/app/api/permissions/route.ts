@@ -36,5 +36,6 @@ export async function PATCH(req: NextRequest) {
     .eq('action', action)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  await supabase.from('activity_logs').insert({ user_id: user.id, action: 'admin.permission_change', details: { role, action, allowed } })
   return NextResponse.json({ success: true })
 }

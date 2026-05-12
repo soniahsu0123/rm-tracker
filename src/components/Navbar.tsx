@@ -8,9 +8,10 @@ import { LayoutDashboard, FolderOpen, Users, LogOut, KeyRound } from 'lucide-rea
 
 interface NavbarProps {
   profile: Profile
+  delayedCount: number
 }
 
-export default function Navbar({ profile }: NavbarProps) {
+export default function Navbar({ profile, delayedCount }: NavbarProps) {
   const router = useRouter()
   const pathname = usePathname()
 
@@ -38,7 +39,7 @@ export default function Navbar({ profile }: NavbarProps) {
                 <Link
                   key={href}
                   href={href}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm transition-colors ${
+                  className={`relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm transition-colors ${
                     pathname === href
                       ? 'bg-indigo-50 text-indigo-700 font-medium'
                       : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
@@ -46,6 +47,11 @@ export default function Navbar({ profile }: NavbarProps) {
                 >
                   <Icon size={15} />
                   {label}
+                  {href === '/projects' && delayedCount > 0 && (
+                    <span className="absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] text-white font-bold leading-none">
+                      {delayedCount > 9 ? '9+' : delayedCount}
+                    </span>
+                  )}
                 </Link>
               ))}
             </div>

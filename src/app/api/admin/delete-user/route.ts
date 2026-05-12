@@ -14,5 +14,6 @@ export async function POST(req: NextRequest) {
   const admin = createAdminClient()
   const { error } = await admin.auth.admin.deleteUser(userId)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  await supabase.from('activity_logs').insert({ user_id: user.id, action: 'admin.delete_user', target_type: 'user', target_id: userId })
   return NextResponse.json({ success: true })
 }

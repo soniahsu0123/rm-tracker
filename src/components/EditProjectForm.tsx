@@ -37,6 +37,21 @@ export default function EditProjectForm({ project }: { project: Project }) {
       return
     }
 
+    const newStatus = formData.get('status') as string
+    const action = newStatus !== project.status ? 'project.status_change' : 'project.update'
+    await fetch('/api/log', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action,
+        target_type: 'project',
+        target_id: project.id,
+        details: newStatus !== project.status
+          ? { from: project.status, to: newStatus }
+          : { name: formData.get('name') },
+      }),
+    })
+
     setOpen(false)
     setLoading(false)
     router.refresh()

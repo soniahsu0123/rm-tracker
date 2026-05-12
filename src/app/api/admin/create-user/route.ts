@@ -22,6 +22,7 @@ export async function POST(req: NextRequest) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
   await supabase.from('profiles').update({ name, role }).eq('id', newUser.user.id)
+  await supabase.from('activity_logs').insert({ user_id: user.id, action: 'admin.create_user', target_type: 'user', target_id: newUser.user.id, details: { username, name, role } })
 
   return NextResponse.json({ success: true })
 }

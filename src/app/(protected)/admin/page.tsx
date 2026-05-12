@@ -25,6 +25,12 @@ export default async function AdminPage() {
 
   const { data: permissions } = await supabase.from('permissions').select('*').order('role').order('action')
 
+  const { data: logs } = await supabase
+    .from('activity_logs')
+    .select('*')
+    .order('created_at', { ascending: false })
+    .limit(200)
+
   return (
     <AdminClient
       members={members ?? []}
@@ -33,6 +39,7 @@ export default async function AdminPage() {
       isAdmin={profile.role === 'admin'}
       isManager={profile.role === 'manager' || profile.role === 'admin'}
       permissions={permissions ?? []}
+      logs={logs ?? []}
     />
   )
 }

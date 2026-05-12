@@ -4,6 +4,16 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Profile, Permission } from '@/types'
 
+interface ActivityLog {
+  id: string
+  user_id: string | null
+  action: string
+  target_type: string | null
+  target_id: string | null
+  details: Record<string, unknown> | null
+  created_at: string
+}
+
 interface Props {
   members: Profile[]
   countsByOwner: Record<string, { total: number; active: number; delayed: number; completed: number }>
@@ -11,6 +21,7 @@ interface Props {
   isAdmin: boolean
   isManager: boolean
   permissions: Permission[]
+  logs: ActivityLog[]
 }
 
 const ROLE_LABEL: Record<string, string> = { admin: '系統管理員', manager: '主管', employee: '員工' }
@@ -18,6 +29,19 @@ const ROLE_STYLE: Record<string, string> = {
   admin: 'bg-violet-50 text-violet-700',
   manager: 'bg-indigo-50 text-indigo-700',
   employee: 'bg-slate-100 text-slate-600',
+}
+
+const LOG_ACTION_LABELS: Record<string, string> = {
+  'project.create': '新增專案',
+  'project.update': '修改專案',
+  'project.status_change': '變更專案狀態',
+  'progress.create': '新增進度更新',
+  'admin.create_user': '新增成員',
+  'admin.delete_user': '刪除成員',
+  'admin.reset_password': '重設密碼',
+  'admin.ban_user': '停用帳號',
+  'admin.unban_user': '啟用帳號',
+  'admin.permission_change': '修改權限',
 }
 
 const ACTION_LABELS: Record<string, string> = {
@@ -35,7 +59,7 @@ const ACTION_LABELS: Record<string, string> = {
 
 const ACTION_ORDER = Object.keys(ACTION_LABELS)
 
-export default function AdminClient({ members, countsByOwner, currentUserId, isAdmin, isManager, permissions: initialPermissions }: Props) {
+export default function AdminClient({ members, countsByOwner, currentUserId, isAdmin, isManager, permissions: initialPermissions, logs }: Props) {
   const router = useRouter()
   const [loading, setLoading] = useState<string | null>(null)
   const [showAddForm, setShowAddForm] = useState(false)
@@ -43,7 +67,7 @@ export default function AdminClient({ members, countsByOwner, currentUserId, isA
   const [newName, setNewName] = useState('')
   const [newRole, setNewRole] = useState<'employee' | 'manager'>('employee')
   const [addError, setAddError] = useState('')
-  const [tab, setTab] = useState<'members' | 'permissions'>('members')
+  const [tab, setTab] = useState<'members' | 'permissions' | 'logs'>('members')
   const [permissions, setPermissions] = useState<Permission[]>(initialPermissions)
   const [permLoading, setPermLoading] = useState<string | null>(null)
 
@@ -131,7 +155,7 @@ export default function AdminClient({ members, countsByOwner, currentUserId, isA
 
       {/* Tabs */}
       <div className="flex gap-1 border-b border-slate-200">
-        {(['members', 'permissions'] as const).map(t => (
+        {(['members', 'permissions', 'logs'] as const).map(t => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -141,7 +165,7 @@ export default function AdminClient({ members, countsByOwner, currentUserId, isA
                 : 'border-transparent text-slate-500 hover:text-slate-700'
             }`}
           >
-            {t === 'members' ? '成員管理' : '權限管理'}
+            {t === 'members' ? '成員管理' : t === 'permissions' ? '權限管理' : '操作日誌'}
           </button>
         ))}
       </div>
@@ -298,6 +322,36 @@ export default function AdminClient({ members, countsByOwner, currentUserId, isA
           <div className="px-4 py-2.5 bg-slate-50 border-t border-slate-200">
             <p className="text-xs text-slate-400">管理員擁有所有權限（無法修改）。主管可調整員工欄位；管理員可調整主管與員工欄位。</p>
           </div>
+        </div>
+      )}
+
+      {/* Logs tab */}
+      {tab === 'logs' && (
+        <div className="bg-white rounded-xl border border-slate-200 divide-y divide-slate-100">
+          {logs.length === 0 ? (
+            <div className="p-8 text-center text-slate-400 text-sm">尚無操作紀錄</div>
+          ) : (
+            logs.map(log => {
+              const actorName = members.find(m => m.id === log.user_id)?.name ?? '系統'
+              const actionLabel = LOG_ACTION_LABELS[log.action] ?? log.action
+              const dt = new Date(log.created_at).toLocaleString('zh-TW', { timeZone: 'Asia/Taipei' })
+              const detailStr = log.details
+                ? Object.entries(log.details).map(([k, v]) => `${k}: ${v}`).join(' / ')
+                : ''
+              return (
+                <div key={log.id} className="flex items-start gap-4 px-4 py-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium text-slate-900">{actorName}</span>
+                      <span className="text-sm text-slate-600">{actionLabel}</span>
+                      {detailStr && <span className="text-xs text-slate-400 truncate">{detailStr}</span>}
+                    </div>
+                  </div>
+                  <span className="text-xs text-slate-400 whitespace-nowrap">{dt}</span>
+                </div>
+              )
+            })
+          )}
         </div>
       )}
     </div>

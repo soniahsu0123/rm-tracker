@@ -24,10 +24,22 @@ export default function LoginPage() {
     if (error) {
       setError('帳號或密碼錯誤')
       setLoading(false)
-    } else {
-      router.push('/dashboard')
-      router.refresh()
+      return
     }
+
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user) {
+      const { data: profile } = await supabase.from('profiles').select('banned').eq('id', user.id).single()
+      if (profile?.banned) {
+        await supabase.auth.signOut()
+        setError('此帳號已被停用，請聯絡管理員')
+        setLoading(false)
+        return
+      }
+    }
+
+    router.push('/dashboard')
+    router.refresh()
   }
 
   return (

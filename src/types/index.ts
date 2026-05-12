@@ -5,6 +5,7 @@ export interface Profile {
   id: string
   name: string
   role: Role
+  banned: boolean
   created_at: string
 }
 

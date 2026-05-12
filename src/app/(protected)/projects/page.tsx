@@ -25,6 +25,7 @@ export default async function ProjectsPage({
   if (!profile) redirect('/login')
 
   const isManager = profile.role === 'manager' || profile.role === 'admin'
+  const today = new Date().toISOString().split('T')[0]
 
   let query = supabase
     .from('projects')
@@ -45,6 +46,8 @@ export default async function ProjectsPage({
     { value: 'active', label: '進行中' },
     { value: 'delayed', label: '落後' },
     { value: 'completed', label: '已完成' },
+    { value: 'paused', label: '暫停' },
+    { value: 'cancelled', label: '取消' },
   ]
 
   return (
@@ -62,7 +65,7 @@ export default async function ProjectsPage({
         </Link>
       </div>
 
-      <div className="flex gap-1">
+      <div className="flex gap-1 flex-wrap">
         {statuses.map(({ value, label }) => (
           <Link
             key={value || 'all'}
@@ -80,30 +83,35 @@ export default async function ProjectsPage({
 
       <div className="bg-white rounded-xl border border-slate-200 divide-y divide-slate-100">
         {projects && projects.length > 0 ? (
-          projects.map(project => (
-            <Link
-              key={project.id}
-              href={`/projects/${project.id}`}
-              className="flex items-center gap-4 p-4 hover:bg-slate-50 transition-colors"
-            >
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-slate-900">{project.name}</p>
-                {isManager && project.profiles && (
-                  <p className="text-xs text-slate-400 mt-0.5">{project.profiles.name}</p>
-                )}
-                {project.description && (
-                  <p className="text-xs text-slate-500 mt-0.5 truncate">{project.description}</p>
-                )}
-              </div>
-              <StatusBadge status={project.status} />
-              <div className="w-36">
-                <ProgressBar value={project.progress_percent} />
-              </div>
-              <p className="text-xs text-slate-400 w-20 text-right">
-                {new Date(project.updated_at).toLocaleDateString('zh-TW')}
-              </p>
-            </Link>
-          ))
+          projects.map(project => {
+            const isOverdue = project.due_date && project.due_date < today && project.status === 'active'
+            return (
+              <Link
+                key={project.id}
+                href={`/projects/${project.id}`}
+                className="flex items-center gap-4 p-4 hover:bg-slate-50 transition-colors"
+              >
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-slate-900">{project.name}</p>
+                  {isManager && project.profiles && (
+                    <p className="text-xs text-slate-400 mt-0.5">{project.profiles.name}</p>
+                  )}
+                  {project.description && (
+                    <p className="text-xs text-slate-500 mt-0.5 truncate">{project.description}</p>
+                  )}
+                </div>
+                <StatusBadge status={project.status} />
+                <div className="w-36">
+                  <ProgressBar value={project.progress_percent} />
+                </div>
+                <p className={`text-xs w-20 text-right ${isOverdue ? 'text-red-500 font-medium' : 'text-slate-400'}`}>
+                  {project.due_date
+                    ? new Date(project.due_date).toLocaleDateString('zh-TW')
+                    : '—'}
+                </p>
+              </Link>
+            )
+          })
         ) : (
           <div className="p-8 text-center text-slate-400 text-sm">
             沒有符合條件的專案

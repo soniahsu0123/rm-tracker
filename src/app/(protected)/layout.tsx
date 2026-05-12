@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import Navbar from '@/components/Navbar'
 
 export default async function ProtectedLayout({
@@ -23,20 +24,36 @@ export default async function ProtectedLayout({
   const isManager = profile.role === 'manager' || profile.role === 'admin'
   const today = new Date().toISOString().split('T')[0]
 
-  let projectQuery = supabase
+  // Auto-sync active projects past their due date → delayed
+  let overdueQuery = supabase
     .from('projects')
-    .select('id, status, due_date, owner_id')
+    .select('id')
     .eq('status', 'active')
     .lt('due_date', today)
 
-  if (!isManager) projectQuery = projectQuery.eq('owner_id', user.id)
+  if (!isManager) overdueQuery = overdueQuery.eq('owner_id', user.id)
 
-  const { data: overdueProjects } = await projectQuery
-  const delayedCount = overdueProjects?.length ?? 0
+  const { data: overdueProjects } = await overdueQuery
+
+  if (overdueProjects && overdueProjects.length > 0) {
+    const admin = createAdminClient()
+    const ids = overdueProjects.map(p => p.id)
+    await admin.from('projects').update({ status: 'delayed' }).in('id', ids)
+  }
+
+  // Badge = all delayed projects (includes just-synced ones)
+  let delayedQuery = supabase
+    .from('projects')
+    .select('id', { count: 'exact', head: true })
+    .eq('status', 'delayed')
+
+  if (!isManager) delayedQuery = delayedQuery.eq('owner_id', user.id)
+
+  const { count: delayedCount } = await delayedQuery
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <Navbar profile={profile} delayedCount={delayedCount} />
+      <Navbar profile={profile} delayedCount={delayedCount ?? 0} />
       <main className="max-w-6xl mx-auto px-4 py-8">
         {children}
       </main>

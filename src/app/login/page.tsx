@@ -1,16 +1,26 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+
+const STORAGE_KEY = 'rm-tracker-username'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [rememberMe, setRememberMe] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const router = useRouter()
+
+  useEffect(() => {
+    const saved = localStorage.getItem(STORAGE_KEY)
+    if (saved) {
+      setEmail(saved)
+      setRememberMe(true)
+    }
+  }, [])
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault()
@@ -38,6 +48,12 @@ export default function LoginPage() {
       }
     }
 
+    if (rememberMe) {
+      localStorage.setItem(STORAGE_KEY, email)
+    } else {
+      localStorage.removeItem(STORAGE_KEY)
+    }
+
     router.push('/dashboard')
     router.refresh()
   }
@@ -52,28 +68,25 @@ export default function LoginPage() {
 
         <form onSubmit={handleLogin} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">
-              帳號
-            </label>
+            <label className="block text-sm font-medium text-slate-700 mb-1">帳號</label>
             <input
               type="text"
               value={email}
               onChange={e => setEmail(e.target.value)}
               required
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              placeholder=""
+              autoComplete="username"
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">
-              密碼
-            </label>
+            <label className="block text-sm font-medium text-slate-700 mb-1">密碼</label>
             <input
               type="password"
               value={password}
               onChange={e => setPassword(e.target.value)}
               required
+              autoComplete="current-password"
               className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
               placeholder="••••••••"
             />
@@ -81,9 +94,15 @@ export default function LoginPage() {
 
           {error && <p className="text-sm text-red-600">{error}</p>}
 
-          <div className="text-right">
-            <span className="text-xs text-slate-400">忘記密碼請聯絡管理員</span>
-          </div>
+          <label className="flex items-center gap-2 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={rememberMe}
+              onChange={e => setRememberMe(e.target.checked)}
+              className="w-4 h-4 accent-indigo-600"
+            />
+            <span className="text-sm text-slate-600">記住帳號</span>
+          </label>
 
           <button
             type="submit"

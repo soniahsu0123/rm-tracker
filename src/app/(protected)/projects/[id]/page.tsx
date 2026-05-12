@@ -6,6 +6,7 @@ import ProgressBar from '@/components/ProgressBar'
 import ProgressUpdateForm from '@/components/ProgressUpdateForm'
 import EditProjectForm from '@/components/EditProjectForm'
 import ProgressUpdateCard from '@/components/ProgressUpdateCard'
+import DeleteProjectButton from '@/components/DeleteProjectButton'
 import { ChevronLeft } from 'lucide-react'
 
 export default async function ProjectDetailPage({
@@ -49,6 +50,9 @@ export default async function ProjectDetailPage({
   const isOwner = project.owner_id === user.id
   const canEdit = isManager || isOwner
 
+  const today = new Date().toISOString().split('T')[0]
+  const isOverdue = project.due_date && project.due_date < today && project.status === 'active'
+
   return (
     <div className="max-w-2xl space-y-6">
       <div>
@@ -65,6 +69,12 @@ export default async function ProjectDetailPage({
             <h1 className="text-xl font-bold text-slate-900">{project.name}</h1>
             {isManager && project.profiles && (
               <p className="text-sm text-slate-500 mt-0.5">負責人：{project.profiles.name}</p>
+            )}
+            {project.due_date && (
+              <p className={`text-xs mt-0.5 ${isOverdue ? 'text-red-500 font-medium' : 'text-slate-400'}`}>
+                截止日：{new Date(project.due_date).toLocaleDateString('zh-TW')}
+                {isOverdue && ' · 已逾期'}
+              </p>
             )}
           </div>
           <StatusBadge status={project.status} />
@@ -84,7 +94,11 @@ export default async function ProjectDetailPage({
       {canEdit && (
         <div className="bg-white rounded-xl border border-slate-200 p-5">
           <h2 className="font-semibold text-slate-900 mb-4">新增進度更新</h2>
-          <ProgressUpdateForm projectId={project.id} userId={user.id} />
+          <ProgressUpdateForm
+            projectId={project.id}
+            userId={user.id}
+            projectProgress={project.progress_percent}
+          />
         </div>
       )}
 
@@ -107,6 +121,12 @@ export default async function ProjectDetailPage({
           </div>
         )}
       </div>
+
+      {isManager && (
+        <div className="pt-4 border-t border-slate-200">
+          <DeleteProjectButton projectId={project.id} projectName={project.name} />
+        </div>
+      )}
     </div>
   )
 }

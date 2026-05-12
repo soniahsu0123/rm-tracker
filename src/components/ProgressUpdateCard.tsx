@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ChevronDown, ChevronUp, Pencil } from 'lucide-react'
+import { ChevronDown, ChevronUp, Pencil, Trash2 } from 'lucide-react'
 
 interface HistoryEntry {
   id: string
@@ -46,6 +46,8 @@ export default function ProgressUpdateCard({ update, canEdit, members }: Props) 
   const [showHistory, setShowHistory] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [progressValue, setProgressValue] = useState(update.progress_percent ?? 0)
+  const [confirmDelete, setConfirmDelete] = useState(false)
 
   const history = update.progress_update_history ?? []
 
@@ -58,9 +60,7 @@ export default function ProgressUpdateCard({ update, canEdit, members }: Props) 
     const body: Record<string, unknown> = {
       week_date: formData.get('week_date') as string,
       description: formData.get('description') as string,
-      progress_percent: formData.get('progress_percent')
-        ? parseInt(formData.get('progress_percent') as string)
-        : null,
+      progress_percent: progressValue,
       issues: (formData.get('issues') as string) || null,
       next_steps: (formData.get('next_steps') as string) || null,
     }
@@ -82,6 +82,18 @@ export default function ProgressUpdateCard({ update, canEdit, members }: Props) 
     router.refresh()
   }
 
+  async function handleDelete() {
+    setLoading(true)
+    const res = await fetch(`/api/progress-updates/${update.id}`, { method: 'DELETE' })
+    if (res.ok) {
+      router.refresh()
+    } else {
+      setError('刪除失敗，請稍後再試')
+      setConfirmDelete(false)
+      setLoading(false)
+    }
+  }
+
   return (
     <div className="bg-white rounded-xl border border-slate-200 p-4">
       {editing ? (
@@ -98,15 +110,16 @@ export default function ProgressUpdateCard({ update, canEdit, members }: Props) 
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-700 mb-1">進度 %</label>
+              <label className="block text-xs font-medium text-slate-700 mb-1">
+                進度 % <span className="text-indigo-600 font-semibold">{progressValue}%</span>
+              </label>
               <input
-                name="progress_percent"
-                type="number"
+                type="range"
                 min="0"
                 max="100"
-                defaultValue={update.progress_percent ?? ''}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                placeholder="選填"
+                value={progressValue}
+                onChange={e => setProgressValue(parseInt(e.target.value))}
+                className="w-full mt-2 accent-indigo-600"
               />
             </div>
           </div>
@@ -172,14 +185,43 @@ export default function ProgressUpdateCard({ update, canEdit, members }: Props) 
                   {update.progress_percent}%
                 </span>
               )}
-              {canEdit && (
-                <button
-                  onClick={() => setEditing(true)}
-                  className="text-slate-300 hover:text-slate-500 transition-colors"
-                  title="修改"
-                >
-                  <Pencil size={13} />
-                </button>
+              {canEdit && !confirmDelete && (
+                <>
+                  <button
+                    onClick={() => setEditing(true)}
+                    disabled={loading}
+                    className="text-slate-300 hover:text-slate-500 transition-colors disabled:opacity-40"
+                    title="修改"
+                  >
+                    <Pencil size={13} />
+                  </button>
+                  <button
+                    onClick={() => setConfirmDelete(true)}
+                    disabled={loading}
+                    className="text-slate-300 hover:text-red-400 transition-colors disabled:opacity-40"
+                    title="刪除"
+                  >
+                    <Trash2 size={13} />
+                  </button>
+                </>
+              )}
+              {canEdit && confirmDelete && (
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs text-red-500">確定刪除？</span>
+                  <button
+                    onClick={handleDelete}
+                    disabled={loading}
+                    className="text-xs text-red-600 font-medium hover:underline disabled:opacity-40"
+                  >
+                    {loading ? '...' : '刪除'}
+                  </button>
+                  <button
+                    onClick={() => setConfirmDelete(false)}
+                    className="text-xs text-slate-400 hover:underline"
+                  >
+                    取消
+                  </button>
+                </div>
               )}
             </div>
           </div>
@@ -198,6 +240,8 @@ export default function ProgressUpdateCard({ update, canEdit, members }: Props) 
               <p className="text-xs text-blue-600">{update.next_steps}</p>
             </div>
           )}
+
+          {error && <p className="text-xs text-red-600 mt-2">{error}</p>}
 
           {history.length > 0 && (
             <div className="mt-2 pt-2 border-t border-slate-100">

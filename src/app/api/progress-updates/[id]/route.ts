@@ -79,3 +79,39 @@ export async function PATCH(
 
   return NextResponse.json({ ok: true, changed: true })
 }
+
+export async function DELETE(
+  _req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+  if (!profile) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const { data: existing } = await supabase.from('progress_updates').select('*').eq('id', id).single()
+  if (!existing) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+
+  const isManager = profile.role === 'manager' || profile.role === 'admin'
+  if (!isManager && existing.created_by !== user.id) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
+
+  const admin = createAdminClient()
+  await admin.from('progress_update_history').delete().eq('update_id', id)
+  const { error: deleteError } = await admin.from('progress_updates').delete().eq('id', id)
+
+  if (deleteError) return NextResponse.json({ error: deleteError.message }, { status: 500 })
+
+  await supabase.from('activity_logs').insert({
+    user_id: user.id,
+    action: 'progress.delete',
+    target_type: 'progress_update',
+    target_id: id,
+  })
+
+  return NextResponse.json({ ok: true })
+}

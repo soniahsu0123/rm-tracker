@@ -1,19 +1,25 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useRef, useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
 interface Props {
   projectId: string
   userId: string
+  projectProgress?: number
 }
 
-export default function ProgressUpdateForm({ projectId, userId }: Props) {
+export default function ProgressUpdateForm({ projectId, userId, projectProgress = 0 }: Props) {
   const router = useRouter()
   const formRef = useRef<HTMLFormElement>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [progressValue, setProgressValue] = useState(projectProgress)
+
+  useEffect(() => {
+    setProgressValue(projectProgress)
+  }, [projectProgress])
 
   const today = new Date().toISOString().split('T')[0]
 
@@ -25,14 +31,12 @@ export default function ProgressUpdateForm({ projectId, userId }: Props) {
     const formData = new FormData(e.currentTarget)
     const supabase = createClient()
 
-    const progressPercent = formData.get('progress_percent') as string
-
     const { error: insertError } = await supabase.from('progress_updates').insert({
       project_id: projectId,
       created_by: userId,
       week_date: formData.get('week_date') as string,
       description: formData.get('description') as string,
-      progress_percent: progressPercent ? parseInt(progressPercent) : null,
+      progress_percent: progressValue,
       issues: (formData.get('issues') as string) || null,
       next_steps: (formData.get('next_steps') as string) || null,
     })
@@ -43,12 +47,7 @@ export default function ProgressUpdateForm({ projectId, userId }: Props) {
       return
     }
 
-    if (progressPercent) {
-      await supabase
-        .from('projects')
-        .update({ progress_percent: parseInt(progressPercent) })
-        .eq('id', projectId)
-    }
+    await supabase.from('projects').update({ progress_percent: progressValue }).eq('id', projectId)
 
     await fetch('/api/log', {
       method: 'POST',
@@ -57,11 +56,12 @@ export default function ProgressUpdateForm({ projectId, userId }: Props) {
         action: 'progress.create',
         target_type: 'project',
         target_id: projectId,
-        details: progressPercent ? { progress_percent: parseInt(progressPercent) } : undefined,
+        details: { progress_percent: progressValue },
       }),
     })
 
     formRef.current?.reset()
+    setProgressValue(projectProgress)
     setLoading(false)
     router.refresh()
   }
@@ -83,15 +83,15 @@ export default function ProgressUpdateForm({ projectId, userId }: Props) {
         </div>
         <div>
           <label className="block text-xs font-medium text-slate-700 mb-1">
-            進度更新 %
+            進度 % <span className="text-indigo-600 font-semibold">{progressValue}%</span>
           </label>
           <input
-            name="progress_percent"
-            type="number"
+            type="range"
             min="0"
             max="100"
-            className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            placeholder="選填"
+            value={progressValue}
+            onChange={e => setProgressValue(parseInt(e.target.value))}
+            className="w-full mt-2 accent-indigo-600"
           />
         </div>
       </div>
@@ -110,9 +110,7 @@ export default function ProgressUpdateForm({ projectId, userId }: Props) {
       </div>
 
       <div>
-        <label className="block text-xs font-medium text-slate-700 mb-1">
-          問題 / 風險
-        </label>
+        <label className="block text-xs font-medium text-slate-700 mb-1">問題 / 風險</label>
         <textarea
           name="issues"
           rows={2}
@@ -122,9 +120,7 @@ export default function ProgressUpdateForm({ projectId, userId }: Props) {
       </div>
 
       <div>
-        <label className="block text-xs font-medium text-slate-700 mb-1">
-          下週計畫
-        </label>
+        <label className="block text-xs font-medium text-slate-700 mb-1">下週計畫</label>
         <textarea
           name="next_steps"
           rows={2}

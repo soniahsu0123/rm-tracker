@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { canUser } from '@/lib/permissions'
 
 export async function PATCH(
   req: NextRequest,
@@ -11,7 +12,7 @@ export async function PATCH(
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+  const { data: profile } = await supabase.from('profiles').select('id, role').eq('id', user.id).single()
   if (!profile) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { data: existing } = await supabase
@@ -22,10 +23,11 @@ export async function PATCH(
 
   if (!existing) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
-  const isManager = profile.role === 'manager' || profile.role === 'admin'
-  if (!isManager && existing.created_by !== user.id) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-  }
+  const isOwn = existing.created_by === user.id
+  const allowed = isOwn
+    ? await canUser(profile, 'updates.update_own')
+    : await canUser(profile, 'updates.update_all')
+  if (!allowed) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   const body = await req.json()
   const fields = ['week_date', 'description', 'progress_percent', 'issues', 'next_steps'] as const
@@ -89,14 +91,13 @@ export async function DELETE(
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+  const { data: profile } = await supabase.from('profiles').select('id, role').eq('id', user.id).single()
   if (!profile) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { data: existing } = await supabase.from('progress_updates').select('*').eq('id', id).single()
   if (!existing) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
-  const isManager = profile.role === 'manager' || profile.role === 'admin'
-  if (!isManager && existing.created_by !== user.id) {
+  if (!(await canUser(profile, 'updates.delete'))) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 

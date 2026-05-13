@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { canUser } from '@/lib/permissions'
 
 export async function DELETE(
   _req: NextRequest,
@@ -11,11 +12,12 @@ export async function DELETE(
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+  const { data: profile } = await supabase.from('profiles').select('id, role').eq('id', user.id).single()
   if (!profile) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const isManager = profile.role === 'manager' || profile.role === 'admin'
-  if (!isManager) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  if (!(await canUser(profile, 'projects.delete'))) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
 
   const admin = createAdminClient()
 

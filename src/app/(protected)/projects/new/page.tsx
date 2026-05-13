@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import NewProjectForm from './NewProjectForm'
+import { canUser } from '@/lib/permissions'
 
 export default async function NewProjectPage() {
   const supabase = await createClient()
@@ -9,12 +10,12 @@ export default async function NewProjectPage() {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('role')
+    .select('id, role')
     .eq('id', user.id)
     .single()
 
   if (!profile) redirect('/login')
-  // Only redirect if no permission - any role can create projects by default
+  if (!(await canUser(profile, 'projects.create'))) redirect('/projects')
 
   return <NewProjectForm />
 }

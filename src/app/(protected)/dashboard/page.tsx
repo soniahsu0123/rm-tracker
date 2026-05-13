@@ -5,6 +5,7 @@ import StatusBadge from '@/components/StatusBadge'
 import ProgressBar from '@/components/ProgressBar'
 import { Profile, Project } from '@/types'
 import { Plus } from 'lucide-react'
+import { getEffectivePermissions } from '@/lib/permissions'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -20,6 +21,8 @@ export default async function DashboardPage() {
   if (!profile) redirect('/login')
 
   const isManager = profile.role === 'manager' || profile.role === 'admin'
+  const perms = await getEffectivePermissions(profile)
+  const canCreate = perms['projects.create']
 
   const { data: allProjects } = await supabase
     .from('projects')
@@ -64,13 +67,15 @@ export default async function DashboardPage() {
             {isManager ? '監看所有成員的進度狀況' : '追蹤你負責的專案進度'}
           </p>
         </div>
-        <Link
-          href="/projects/new"
-          className="flex items-center gap-1.5 bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors"
-        >
-          <Plus size={15} />
-          新增專案
-        </Link>
+        {canCreate && (
+          <Link
+            href="/projects/new"
+            className="flex items-center gap-1.5 bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors"
+          >
+            <Plus size={15} />
+            新增專案
+          </Link>
+        )}
       </div>
 
       <div className="grid grid-cols-4 gap-3">

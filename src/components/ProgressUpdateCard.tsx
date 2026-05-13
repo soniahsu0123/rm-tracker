@@ -29,6 +29,7 @@ interface Member {
 interface Props {
   update: Update
   canEdit: boolean
+  canDelete?: boolean
   members: Member[]
 }
 
@@ -40,7 +41,7 @@ const FIELD_LABELS: Record<string, string> = {
   next_steps: '下週計畫',
 }
 
-export default function ProgressUpdateCard({ update, canEdit, members }: Props) {
+export default function ProgressUpdateCard({ update, canEdit, canDelete = canEdit, members }: Props) {
   const router = useRouter()
   const [editing, setEditing] = useState(false)
   const [showHistory, setShowHistory] = useState(false)
@@ -185,27 +186,31 @@ export default function ProgressUpdateCard({ update, canEdit, members }: Props) 
                   {update.progress_percent}%
                 </span>
               )}
-              {canEdit && !confirmDelete && (
+              {!confirmDelete && (canEdit || canDelete) && (
                 <>
-                  <button
-                    onClick={() => setEditing(true)}
-                    disabled={loading}
-                    className="text-slate-300 hover:text-slate-500 transition-colors disabled:opacity-40"
-                    title="修改"
-                  >
-                    <Pencil size={13} />
-                  </button>
-                  <button
-                    onClick={() => setConfirmDelete(true)}
-                    disabled={loading}
-                    className="text-slate-300 hover:text-red-400 transition-colors disabled:opacity-40"
-                    title="刪除"
-                  >
-                    <Trash2 size={13} />
-                  </button>
+                  {canEdit && (
+                    <button
+                      onClick={() => setEditing(true)}
+                      disabled={loading}
+                      className="text-slate-300 hover:text-slate-500 transition-colors disabled:opacity-40"
+                      title="修改"
+                    >
+                      <Pencil size={13} />
+                    </button>
+                  )}
+                  {canDelete && (
+                    <button
+                      onClick={() => setConfirmDelete(true)}
+                      disabled={loading}
+                      className="text-slate-300 hover:text-red-400 transition-colors disabled:opacity-40"
+                      title="刪除"
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  )}
                 </>
               )}
-              {canEdit && confirmDelete && (
+              {canDelete && confirmDelete && (
                 <div className="flex items-center gap-1.5">
                   <span className="text-xs text-red-500">確定刪除？</span>
                   <button

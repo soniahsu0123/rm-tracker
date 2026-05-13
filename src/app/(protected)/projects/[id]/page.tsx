@@ -8,6 +8,7 @@ import EditProjectForm from '@/components/EditProjectForm'
 import ProgressUpdateCard from '@/components/ProgressUpdateCard'
 import DeleteProjectButton from '@/components/DeleteProjectButton'
 import { ChevronLeft } from 'lucide-react'
+import { getEffectivePermissions } from '@/lib/permissions'
 
 export default async function ProjectDetailPage({
   params,
@@ -48,7 +49,11 @@ export default async function ProjectDetailPage({
 
   const isManager = profile.role === 'manager' || profile.role === 'admin'
   const isOwner = project.owner_id === user.id
-  const canEdit = isManager || isOwner
+  const perms = await getEffectivePermissions(profile)
+
+  const canEditProject = isOwner ? perms['projects.update_own'] : perms['projects.update_all']
+  const canCreateUpdate = perms['updates.create'] && (isOwner || isManager)
+  const canDeleteProject = perms['projects.delete']
 
   const today = new Date().toISOString().split('T')[0]
   const isOverdue = project.due_date && project.due_date < today && project.status === 'active'
@@ -89,9 +94,9 @@ export default async function ProjectDetailPage({
         </div>
       </div>
 
-      {canEdit && <EditProjectForm project={project} />}
+      {canEditProject && <EditProjectForm project={project} />}
 
-      {canEdit && (
+      {canCreateUpdate && (
         <div className="bg-white rounded-xl border border-slate-200 p-5">
           <h2 className="font-semibold text-slate-900 mb-4">新增進度更新</h2>
           <ProgressUpdateForm
@@ -106,14 +111,20 @@ export default async function ProjectDetailPage({
         <h2 className="font-semibold text-slate-900 mb-3">進度記錄</h2>
         {updates && updates.length > 0 ? (
           <div className="space-y-3">
-            {updates.map(update => (
-              <ProgressUpdateCard
-                key={update.id}
-                update={update}
-                canEdit={canEdit}
-                members={members ?? []}
-              />
-            ))}
+            {updates.map(update => {
+              const isOwnUpdate = update.created_by === user.id
+              const canEditUpdate = isOwnUpdate ? perms['updates.update_own'] : perms['updates.update_all']
+              const canDeleteUpdate = perms['updates.delete']
+              return (
+                <ProgressUpdateCard
+                  key={update.id}
+                  update={update}
+                  canEdit={canEditUpdate}
+                  canDelete={canDeleteUpdate}
+                  members={members ?? []}
+                />
+              )
+            })}
           </div>
         ) : (
           <div className="bg-white rounded-xl border border-slate-200 p-6 text-center text-slate-400 text-sm">
@@ -122,7 +133,7 @@ export default async function ProjectDetailPage({
         )}
       </div>
 
-      {isManager && (
+      {canDeleteProject && (
         <div className="pt-4 border-t border-slate-200">
           <DeleteProjectButton projectId={project.id} projectName={project.name} />
         </div>

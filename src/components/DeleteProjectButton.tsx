@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { Trash2 } from 'lucide-react'
 
 interface Props {
@@ -9,6 +10,7 @@ interface Props {
 }
 
 export default function DeleteProjectButton({ projectId, projectName }: Props) {
+  const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
 
@@ -16,7 +18,8 @@ export default function DeleteProjectButton({ projectId, projectName }: Props) {
     setLoading(true)
     const res = await fetch(`/api/projects/${projectId}`, { method: 'DELETE' })
     if (res.ok) {
-      window.location.href = '/projects'
+      router.push('/projects')
+      router.refresh()
     } else {
       alert('刪除失敗，請稍後再試')
       setConfirmDelete(false)

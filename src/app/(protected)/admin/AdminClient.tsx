@@ -91,7 +91,7 @@ export default function AdminClient({ members, countsByOwner, currentUserId, isA
   const [newRole, setNewRole] = useState<'employee' | 'manager'>('employee')
   const [addError, setAddError] = useState('')
   const [tab, setTab] = useState<'members' | 'permissions' | 'logs'>('members')
-  const [permissions, setPermissions] = useState<Permission[]>(initialPermissions)
+  const [permissions] = useState<Permission[]>(initialPermissions)
   const [permLoading, setPermLoading] = useState<string | null>(null)
   const [userPermissions, setUserPermissions] = useState<UserPermission[]>(initialUserPermissions)
   const [expandedUser, setExpandedUser] = useState<string | null>(null)
@@ -144,50 +144,22 @@ export default function AdminClient({ members, countsByOwner, currentUserId, isA
     }
   }
 
-  async function toggleRolePermission(role: 'manager' | 'employee', action: string, allowed: boolean) {
-    const key = `role.${role}.${action}`
+  async function toggleUserPermission(userId: string, action: string, currentOverride: boolean | null, roleDefault: boolean) {
+    const key = `user.${userId}.${action}`
     setPermLoading(key)
-    const res = await fetch('/api/permissions', {
+    const effective = currentOverride !== null ? currentOverride : roleDefault
+    const newAllowed = !effective
+    const res = await fetch('/api/user-permissions', {
       method: 'PATCH',
-      body: JSON.stringify({ role, action, allowed }),
+      body: JSON.stringify({ target_user_id: userId, action, allowed: newAllowed }),
       headers: { 'Content-Type': 'application/json' },
     })
     if (res.ok) {
-      setPermissions(prev =>
-        prev.map(p => p.role === role && p.action === action ? { ...p, allowed } : p)
-      )
-    }
-    setPermLoading(null)
-  }
-
-  async function toggleUserPermission(userId: string, action: string, currentAllowed: boolean | null, roleDefault: boolean) {
-    const key = `user.${userId}.${action}`
-    setPermLoading(key)
-
-    if (currentAllowed === null) {
-      // No override yet — create one with the opposite of role default
-      const newAllowed = !roleDefault
-      const res = await fetch('/api/user-permissions', {
-        method: 'PATCH',
-        body: JSON.stringify({ target_user_id: userId, action, allowed: newAllowed }),
-        headers: { 'Content-Type': 'application/json' },
+      setUserPermissions(prev => {
+        const existing = prev.find(p => p.user_id === userId && p.action === action)
+        if (existing) return prev.map(p => p.user_id === userId && p.action === action ? { ...p, allowed: newAllowed } : p)
+        return [...prev, { user_id: userId, action, allowed: newAllowed }]
       })
-      if (res.ok) {
-        setUserPermissions(prev => [...prev, { user_id: userId, action, allowed: newAllowed }])
-      }
-    } else {
-      // Toggle existing override
-      const newAllowed = !currentAllowed
-      const res = await fetch('/api/user-permissions', {
-        method: 'PATCH',
-        body: JSON.stringify({ target_user_id: userId, action, allowed: newAllowed }),
-        headers: { 'Content-Type': 'application/json' },
-      })
-      if (res.ok) {
-        setUserPermissions(prev =>
-          prev.map(p => p.user_id === userId && p.action === action ? { ...p, allowed: newAllowed } : p)
-        )
-      }
     }
     setPermLoading(null)
   }
@@ -348,135 +320,62 @@ export default function AdminClient({ members, countsByOwner, currentUserId, isA
         </>
       )}
 
-      {/* Permissions tab */}
+      {/* Permissions tab — one flat list of users I can manage */}
       {tab === 'permissions' && (
-        <div className="space-y-4">
-          {/* Role-level defaults */}
-          <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-            <div className="px-4 py-3 bg-slate-50 border-b border-slate-200">
-              <p className="text-sm font-medium text-slate-700">角色預設權限</p>
-              <p className="text-xs text-slate-400 mt-0.5">部門主管預設全開；系統管理員擁有所有權限無法修改</p>
-            </div>
-            <div className="grid grid-cols-[1fr,80px,80px] text-xs font-medium text-slate-500 bg-slate-50 px-4 py-2.5 border-b border-slate-200">
-              <span>功能</span>
-              <span className="text-center">部門主管</span>
-              <span className="text-center">員工</span>
-            </div>
-            {ACTION_ORDER.map(action => (
-              <div key={action} className="grid grid-cols-[1fr,80px,80px] items-center px-4 py-3 border-b border-slate-100 last:border-0">
-                <span className="text-sm text-slate-700">{ACTION_LABELS[action]}</span>
-                {(['manager', 'employee'] as const).map(role => {
-                  const key = `role.${role}.${action}`
-                  const allowed = getRolePerm(role, action)
-                  const canEdit = isAdmin || (isManager && role === 'employee')
-                  return (
-                    <div key={role} className="flex justify-center">
-                      {canEdit ? (
-                        <ToggleSwitch
-                          allowed={allowed}
-                          loading={permLoading === key}
-                          onChange={() => toggleRolePermission(role, action, !allowed)}
-                        />
-                      ) : (
-                        <span className={`inline-block w-2 h-2 rounded-full ${allowed ? 'bg-indigo-400' : 'bg-slate-200'}`} />
-                      )}
+        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+          <div className="px-4 py-3 bg-slate-50 border-b border-slate-200">
+            <p className="text-xs text-slate-400">
+              {isAdmin
+                ? '你可以管理所有部門主管與員工的權限。系統管理員自身權限固定全開。'
+                : '你可以管理你下面員工的權限。你自己的權限由系統管理員設定。'}
+            </p>
+          </div>
+          {permissionTargets.length === 0 ? (
+            <div className="p-6 text-center text-sm text-slate-400">尚無可管理的成員</div>
+          ) : (
+            permissionTargets.map(member => {
+              const memberRole = member.role as 'manager' | 'employee'
+              const isExpanded = expandedUser === member.id
+              return (
+                <div key={member.id} className="border-b border-slate-100 last:border-0">
+                  <button
+                    onClick={() => setExpandedUser(isExpanded ? null : member.id)}
+                    className="w-full flex items-center justify-between px-4 py-3 hover:bg-slate-50 transition-colors"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium text-slate-800">{member.name}</span>
+                      <span className={`text-xs px-1.5 py-0.5 rounded ${ROLE_STYLE[member.role]}`}>
+                        {ROLE_LABEL[member.role]}
+                      </span>
                     </div>
-                  )
-                })}
-              </div>
-            ))}
-          </div>
+                    {isExpanded ? <ChevronUp size={15} className="text-slate-400" /> : <ChevronDown size={15} className="text-slate-400" />}
+                  </button>
 
-          {/* Individual user permissions */}
-          <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-            <div className="px-4 py-3 bg-slate-50 border-b border-slate-200">
-              <p className="text-sm font-medium text-slate-700">個人權限設定</p>
-              <p className="text-xs text-slate-400 mt-0.5">個人設定會覆蓋角色預設值。未設定則沿用角色預設。</p>
-            </div>
-            {permissionTargets.length === 0 ? (
-              <div className="p-6 text-center text-sm text-slate-400">尚無可管理的成員</div>
-            ) : (
-              permissionTargets.map(member => {
-                const memberRole = member.role as 'manager' | 'employee'
-                const isExpanded = expandedUser === member.id
-                return (
-                  <div key={member.id} className="border-b border-slate-100 last:border-0">
-                    <button
-                      onClick={() => setExpandedUser(isExpanded ? null : member.id)}
-                      className="w-full flex items-center justify-between px-4 py-3 hover:bg-slate-50 transition-colors"
-                    >
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium text-slate-800">{member.name}</span>
-                        <span className={`text-xs px-1.5 py-0.5 rounded ${ROLE_STYLE[member.role]}`}>
-                          {ROLE_LABEL[member.role]}
-                        </span>
-                        {userPermissions.filter(p => p.user_id === member.id).length > 0 && (
-                          <span className="text-xs text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded">
-                            {userPermissions.filter(p => p.user_id === member.id).length} 項個人設定
-                          </span>
-                        )}
-                      </div>
-                      {isExpanded ? <ChevronUp size={15} className="text-slate-400" /> : <ChevronDown size={15} className="text-slate-400" />}
-                    </button>
+                  {isExpanded && (
+                    <div className="px-4 pb-3 space-y-0.5">
+                      {ACTION_ORDER.map(action => {
+                        const roleDefault = getRolePerm(memberRole, action)
+                        const userOverride = getUserPerm(member.id, action)
+                        const effective = userOverride !== null ? userOverride : roleDefault
+                        const key = `user.${member.id}.${action}`
 
-                    {isExpanded && (
-                      <div className="px-4 pb-3 space-y-1">
-                        <div className="grid grid-cols-[1fr,auto,auto] text-xs text-slate-400 px-2 py-1 gap-4">
-                          <span>功能</span>
-                          <span className="w-14 text-center">角色預設</span>
-                          <span className="w-14 text-center">個人設定</span>
-                        </div>
-                        {ACTION_ORDER.map(action => {
-                          const roleDefault = getRolePerm(memberRole, action)
-                          const userOverride = getUserPerm(member.id, action)
-                          const effective = userOverride !== null ? userOverride : roleDefault
-                          const key = `user.${member.id}.${action}`
-                          const hasOverride = userOverride !== null
-
-                          return (
-                            <div key={action} className="grid grid-cols-[1fr,auto,auto] items-center px-2 py-1.5 rounded-lg hover:bg-slate-50 gap-4">
-                              <span className="text-sm text-slate-700">{ACTION_LABELS[action]}</span>
-                              {/* Role default indicator */}
-                              <div className="w-14 flex justify-center">
-                                <span className={`inline-block w-2 h-2 rounded-full ${roleDefault ? 'bg-indigo-300' : 'bg-slate-200'}`} />
-                              </div>
-                              {/* Individual toggle */}
-                              <div className="w-14 flex items-center justify-center gap-1">
-                                <ToggleSwitch
-                                  allowed={effective}
-                                  loading={permLoading === key}
-                                  onChange={() => toggleUserPermission(member.id, action, userOverride, roleDefault)}
-                                />
-                                {hasOverride && (
-                                  <button
-                                    onClick={async e => {
-                                      e.stopPropagation()
-                                      setPermLoading(key)
-                                      await fetch('/api/user-permissions', {
-                                        method: 'DELETE',
-                                        body: JSON.stringify({ target_user_id: member.id, action }),
-                                        headers: { 'Content-Type': 'application/json' },
-                                      })
-                                      setUserPermissions(prev => prev.filter(p => !(p.user_id === member.id && p.action === action)))
-                                      setPermLoading(null)
-                                    }}
-                                    className="text-slate-300 hover:text-red-400 text-xs leading-none"
-                                    title="還原為角色預設"
-                                  >
-                                    ×
-                                  </button>
-                                )}
-                              </div>
-                            </div>
-                          )
-                        })}
-                      </div>
-                    )}
-                  </div>
-                )
-              })
-            )}
-          </div>
+                        return (
+                          <div key={action} className="flex items-center justify-between px-2 py-2 rounded-lg hover:bg-slate-50">
+                            <span className="text-sm text-slate-700">{ACTION_LABELS[action]}</span>
+                            <ToggleSwitch
+                              allowed={effective}
+                              loading={permLoading === key}
+                              onChange={() => toggleUserPermission(member.id, action, userOverride, roleDefault)}
+                            />
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+              )
+            })
+          )}
         </div>
       )}
 

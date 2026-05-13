@@ -24,36 +24,28 @@ export default async function ProtectedLayout({
   const isManager = profile.role === 'manager' || profile.role === 'admin'
   const today = new Date().toISOString().split('T')[0]
 
-  // Auto-sync active projects past their due date → delayed
-  let overdueQuery = supabase
-    .from('projects')
-    .select('id')
-    .eq('status', 'active')
-    .lt('due_date', today)
-
-  if (!isManager) overdueQuery = overdueQuery.eq('owner_id', user.id)
-
-  const { data: overdueProjects } = await overdueQuery
-
-  if (overdueProjects && overdueProjects.length > 0) {
-    const admin = createAdminClient()
-    const ids = overdueProjects.map(p => p.id)
-    await admin.from('projects').update({ status: 'delayed' }).in('id', ids)
+  // Run overdue check and delayed count in parallel
+  let overdueQ = supabase.from('projects').select('id').eq('status', 'active').lt('due_date', today)
+  let delayedQ = supabase.from('projects').select('id', { count: 'exact', head: true }).eq('status', 'delayed')
+  if (!isManager) {
+    overdueQ = overdueQ.eq('owner_id', user.id)
+    delayedQ = delayedQ.eq('owner_id', user.id)
   }
 
-  // Badge = all delayed projects (includes just-synced ones)
-  let delayedQuery = supabase
-    .from('projects')
-    .select('id', { count: 'exact', head: true })
-    .eq('status', 'delayed')
+  const [{ data: overdueProjects }, { count: delayedCount }] = await Promise.all([overdueQ, delayedQ])
 
-  if (!isManager) delayedQuery = delayedQuery.eq('owner_id', user.id)
+  // Fire-and-forget: sync overdue → delayed without blocking render
+  if (overdueProjects && overdueProjects.length > 0) {
+    const ids = overdueProjects.map(p => p.id)
+    createAdminClient().from('projects').update({ status: 'delayed' }).in('id', ids).then(() => {})
+  }
 
-  const { count: delayedCount } = await delayedQuery
+  // Effective badge count = persisted delayed + newly-overdue (not yet written)
+  const effectiveDelayedCount = (delayedCount ?? 0) + (overdueProjects?.length ?? 0)
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <Navbar profile={profile} delayedCount={delayedCount ?? 0} />
+      <Navbar profile={profile} delayedCount={effectiveDelayedCount} />
       <main className="max-w-6xl mx-auto px-4 py-8">
         {children}
       </main>

@@ -24,7 +24,7 @@ interface Props {
   logs: ActivityLog[]
 }
 
-const ROLE_LABEL: Record<string, string> = { admin: '系統管理員', manager: '主管', employee: '員工' }
+const ROLE_LABEL: Record<string, string> = { admin: '系統管理員', manager: '部門主管', employee: '員工' }
 const ROLE_STYLE: Record<string, string> = {
   admin: 'bg-violet-50 text-violet-700',
   manager: 'bg-indigo-50 text-indigo-700',
@@ -210,7 +210,7 @@ export default function AdminClient({ members, countsByOwner, currentUserId, isA
                     className="px-3 py-1.5 border border-slate-300 rounded-lg text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   >
                     <option value="employee">員工</option>
-                    <option value="manager">主管</option>
+                    <option value="manager">部門主管</option>
                   </select>
                 </div>
               </div>
@@ -286,7 +286,7 @@ export default function AdminClient({ members, countsByOwner, currentUserId, isA
         <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
           <div className="grid grid-cols-[1fr,80px,80px] text-xs font-medium text-slate-500 bg-slate-50 px-4 py-2.5 border-b border-slate-200">
             <span>功能</span>
-            <span className="text-center">主管</span>
+            <span className="text-center">部門主管</span>
             <span className="text-center">員工</span>
           </div>
           {ACTION_ORDER.map(action => (
@@ -311,11 +311,7 @@ export default function AdminClient({ members, countsByOwner, currentUserId, isA
                         }`} />
                       </button>
                     ) : (
-                      <span className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-xs ${
-                        allowed ? 'text-indigo-600' : 'text-slate-300'
-                      }`}>
-                        {allowed ? '✓' : '✗'}
-                      </span>
+                      <span className={`inline-block w-2 h-2 rounded-full ${allowed ? 'bg-indigo-400' : 'bg-slate-200'}`} />
                     )}
                   </div>
                 )
@@ -323,7 +319,7 @@ export default function AdminClient({ members, countsByOwner, currentUserId, isA
             </div>
           ))}
           <div className="px-4 py-2.5 bg-slate-50 border-t border-slate-200">
-            <p className="text-xs text-slate-400">管理員擁有所有權限（無法修改）。主管可調整員工欄位；管理員可調整主管與員工欄位。</p>
+            <p className="text-xs text-slate-400">系統管理員擁有所有權限（無法修改）。部門主管可調整員工欄位；系統管理員可調整部門主管與員工欄位。</p>
           </div>
         </div>
       )}

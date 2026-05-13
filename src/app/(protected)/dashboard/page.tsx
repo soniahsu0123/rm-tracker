@@ -75,15 +75,15 @@ export default async function DashboardPage() {
 
       <div className="grid grid-cols-4 gap-3">
         {[
-          { label: '全部', value: total, color: 'text-slate-900' },
-          { label: '進行中', value: active, color: 'text-blue-700' },
-          { label: '落後', value: delayed, color: 'text-red-700' },
-          { label: '已完成', value: completed, color: 'text-green-700' },
-        ].map(({ label, value, color }) => (
-          <div key={label} className="bg-white rounded-xl border border-slate-200 p-4">
+          { label: '全部', value: total, color: 'text-slate-900', href: '/projects' },
+          { label: '進行中', value: active, color: 'text-blue-700', href: '/projects?status=active' },
+          { label: '落後', value: delayed, color: 'text-red-700', href: '/projects?status=delayed' },
+          { label: '已完成', value: completed, color: 'text-green-700', href: '/projects?status=completed' },
+        ].map(({ label, value, color, href }) => (
+          <Link key={label} href={href} className="bg-white rounded-xl border border-slate-200 p-4 hover:border-indigo-200 hover:shadow-sm transition-all">
             <p className="text-xs text-slate-500">{label}</p>
             <p className={`text-2xl font-bold mt-1 ${color}`}>{value}</p>
-          </div>
+          </Link>
         ))}
       </div>
 

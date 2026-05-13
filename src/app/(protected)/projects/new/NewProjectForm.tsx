@@ -8,6 +8,7 @@ export default function NewProjectForm() {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [progressValue, setProgressValue] = useState(0)
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -27,7 +28,7 @@ export default function NewProjectForm() {
       name: formData.get('name') as string,
       description: (formData.get('description') as string) || null,
       status: 'active',
-      progress_percent: parseInt(formData.get('progress_percent') as string) || 0,
+      progress_percent: progressValue,
       due_date: (formData.get('due_date') as string) || null,
       owner_id: user.id,
     })
@@ -77,14 +78,16 @@ export default function NewProjectForm() {
 
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">目前進度 %</label>
+            <label className="block text-sm font-medium text-slate-700 mb-1">
+              目前進度 % <span className="text-indigo-600 font-semibold">{progressValue}%</span>
+            </label>
             <input
-              name="progress_percent"
-              type="number"
+              type="range"
               min="0"
               max="100"
-              defaultValue="0"
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              value={progressValue}
+              onChange={e => setProgressValue(parseInt(e.target.value))}
+              className="w-full mt-2 accent-indigo-600"
             />
           </div>
           <div>

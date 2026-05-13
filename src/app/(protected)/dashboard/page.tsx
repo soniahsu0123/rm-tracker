@@ -101,21 +101,35 @@ export default async function DashboardPage() {
                 <span className="text-xs text-slate-400">{memberProjects.length} 個專案</span>
               </div>
               <div className="space-y-2">
-                {memberProjects.map(project => (
-                  <Link
-                    key={project.id}
-                    href={`/projects/${project.id}`}
-                    className="flex items-center gap-4 hover:bg-slate-50 rounded-lg p-2 -mx-2 transition-colors"
-                  >
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-slate-900 truncate">{project.name}</p>
-                    </div>
-                    <StatusBadge status={project.status} />
-                    <div className="w-32">
-                      <ProgressBar value={project.progress_percent} />
-                    </div>
-                  </Link>
-                ))}
+                {memberProjects.map(project => {
+                  const isOverdueP = project.due_date && project.due_date < today && (project.status === 'active' || project.status === 'delayed')
+                  const daysOverdueP = isOverdueP && project.due_date
+                    ? Math.floor((new Date(today).getTime() - new Date(project.due_date).getTime()) / 86400000)
+                    : 0
+                  return (
+                    <Link
+                      key={project.id}
+                      href={`/projects/${project.id}`}
+                      className="flex items-center gap-4 hover:bg-slate-50 rounded-lg p-2 -mx-2 transition-colors"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-slate-900 truncate">{project.name}</p>
+                      </div>
+                      <StatusBadge status={project.status} />
+                      <div className="w-32">
+                        <ProgressBar value={project.progress_percent} />
+                      </div>
+                      <div className={`text-xs w-24 text-right ${isOverdueP ? 'text-red-500 font-medium' : 'text-slate-400'}`}>
+                        {project.due_date
+                          ? <>
+                              <div>{new Date(project.due_date).toLocaleDateString('zh-TW')}</div>
+                              {isOverdueP && <div className="text-[10px]">逾期 {daysOverdueP} 天</div>}
+                            </>
+                          : '—'}
+                      </div>
+                    </Link>
+                  )
+                })}
               </div>
             </div>
           ))}

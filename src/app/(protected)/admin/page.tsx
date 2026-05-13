@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import AdminClient from './AdminClient'
 
@@ -25,6 +26,10 @@ export default async function AdminPage() {
 
   const { data: permissions } = await supabase.from('permissions').select('*').order('role').order('action')
 
+  // Fetch all individual user permission overrides
+  const admin = createAdminClient()
+  const { data: userPermissions } = await admin.from('user_permissions').select('user_id, action, allowed')
+
   const { data: logs } = await supabase
     .from('activity_logs')
     .select('*')
@@ -39,6 +44,7 @@ export default async function AdminPage() {
       isAdmin={profile.role === 'admin'}
       isManager={profile.role === 'manager' || profile.role === 'admin'}
       permissions={permissions ?? []}
+      userPermissions={userPermissions ?? []}
       logs={logs ?? []}
     />
   )

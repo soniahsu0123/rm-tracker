@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import StatusBadge from '@/components/StatusBadge'
 import ProgressBar from '@/components/ProgressBar'
-import { Plus } from 'lucide-react'
+import { Plus, Download } from 'lucide-react'
 import { Status } from '@/types'
 import { getEffectivePermissions } from '@/lib/permissions'
 
@@ -60,15 +60,26 @@ export default async function ProjectsPage({
         <h1 className="text-xl font-bold text-slate-900">
           {isManager ? '所有專案' : '我的專案'}
         </h1>
-        {canCreate && (
-          <Link
-            href="/projects/new"
-            className="flex items-center gap-1.5 bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors"
-          >
-            <Plus size={15} />
-            新增專案
-          </Link>
-        )}
+        <div className="flex items-center gap-2">
+          {canReadAll && (
+            <a
+              href={`/api/export-projects${params.status ? `?status=${params.status}` : ''}`}
+              className="flex items-center gap-1.5 bg-white text-slate-700 border border-slate-300 px-3 py-2 rounded-lg text-sm font-medium hover:bg-slate-50 transition-colors"
+            >
+              <Download size={15} />
+              匯出 Excel
+            </a>
+          )}
+          {canCreate && (
+            <Link
+              href="/projects/new"
+              className="flex items-center gap-1.5 bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors"
+            >
+              <Plus size={15} />
+              新增專案
+            </Link>
+          )}
+        </div>
       </div>
 
       <div className="flex gap-1 flex-wrap">

@@ -390,7 +390,22 @@ export default function AdminClient({ members, countsByOwner, currentUserId, isA
               const actionLabel = LOG_ACTION_LABELS[log.action] ?? log.action
               const dt = new Date(log.created_at).toLocaleString('zh-TW', { timeZone: 'Asia/Taipei' })
               const detailStr = log.details
-                ? Object.entries(log.details).map(([k, v]) => `${k}: ${v}`).join(' / ')
+                ? Object.entries(log.details).map(([k, v]) => {
+                    // Replace UUIDs in target_user_id with member name
+                    if (k === 'target_user_id' && typeof v === 'string') {
+                      const target = members.find(m => m.id === v)
+                      return `對象: ${target?.name ?? v}`
+                    }
+                    const labelMap: Record<string, string> = {
+                      level: '層級', action: '動作', allowed: '允許',
+                      role: '角色', name: '名稱', changes: '變更數',
+                      progress_percent: '進度',
+                      from: '從', to: '到',
+                    }
+                    const label = labelMap[k] ?? k
+                    const val = k === 'allowed' ? (v ? '是' : '否') : v
+                    return `${label}: ${val}`
+                  }).join(' / ')
                 : ''
               return (
                 <div key={log.id} className="flex items-start gap-4 px-4 py-3">

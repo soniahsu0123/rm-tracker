@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Project } from '@/types'
@@ -12,6 +12,8 @@ export default function EditProjectForm({ project }: { project: Project }) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [progressValue, setProgressValue] = useState(project.progress_percent)
+
+  useEffect(() => { setProgressValue(project.progress_percent) }, [project.progress_percent])
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()

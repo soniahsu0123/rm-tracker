@@ -90,7 +90,10 @@ export default async function ProjectsPage({
       <div className="bg-white rounded-xl border border-slate-200 divide-y divide-slate-100">
         {projects && projects.length > 0 ? (
           projects.map(project => {
-            const isOverdue = project.due_date && project.due_date < today && project.status === 'active'
+            const isOverdue = project.due_date && project.due_date < today && (project.status === 'active' || project.status === 'delayed')
+            const daysOverdue = isOverdue && project.due_date
+              ? Math.floor((new Date(today).getTime() - new Date(project.due_date).getTime()) / (1000 * 60 * 60 * 24))
+              : 0
             return (
               <Link
                 key={project.id}
@@ -110,11 +113,14 @@ export default async function ProjectsPage({
                 <div className="w-36">
                   <ProgressBar value={project.progress_percent} />
                 </div>
-                <p className={`text-xs w-20 text-right ${isOverdue ? 'text-red-500 font-medium' : 'text-slate-400'}`}>
+                <div className={`text-xs w-24 text-right ${isOverdue ? 'text-red-500 font-medium' : 'text-slate-400'}`}>
                   {project.due_date
-                    ? new Date(project.due_date).toLocaleDateString('zh-TW')
+                    ? <>
+                        <div>{new Date(project.due_date).toLocaleDateString('zh-TW')}</div>
+                        {isOverdue && <div className="text-[10px]">逾期 {daysOverdue} 天</div>}
+                      </>
                     : '—'}
-                </p>
+                </div>
               </Link>
             )
           })

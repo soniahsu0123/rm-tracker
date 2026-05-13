@@ -56,7 +56,10 @@ export default async function ProjectDetailPage({
   const canDeleteProject = perms['projects.delete']
 
   const today = new Date().toISOString().split('T')[0]
-  const isOverdue = project.due_date && project.due_date < today && project.status === 'active'
+  const isOverdue = project.due_date && project.due_date < today && (project.status === 'active' || project.status === 'delayed')
+  const daysOverdue = isOverdue && project.due_date
+    ? Math.floor((new Date(today).getTime() - new Date(project.due_date).getTime()) / (1000 * 60 * 60 * 24))
+    : 0
 
   return (
     <div className="max-w-2xl space-y-6">
@@ -78,7 +81,7 @@ export default async function ProjectDetailPage({
             {project.due_date && (
               <p className={`text-xs mt-0.5 ${isOverdue ? 'text-red-500 font-medium' : 'text-slate-400'}`}>
                 截止日：{new Date(project.due_date).toLocaleDateString('zh-TW')}
-                {isOverdue && ' · 已逾期'}
+                {isOverdue && ` · 已逾期 ${daysOverdue} 天`}
               </p>
             )}
           </div>
